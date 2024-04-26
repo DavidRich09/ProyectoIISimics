@@ -13,7 +13,9 @@
 
 dml 1.4;
 
+
 device pci_data_capture;
+import "../my_iface-interface/my_iface-interface.dml"; 
 import "utility.dml";
 param desc = "PCI data capture";
 param documentation = "This simulated PCI device recieves a file path in the attribute and displays the first 8 bytes of the attribute file";
@@ -29,6 +31,10 @@ extern FILE * fopen(const char *, const char *);
 extern int fgetc(FILE *);
 extern int fclose(FILE *);
 extern typedef struct { } FILE;
+
+connect plugin {
+    interface my_iface;
+}
 
 /*
     imports the basic pci functionality
@@ -122,16 +128,11 @@ bank regs is function_mapped_bank {
         //called on write by the processor
         method write(uint64 value) {
             local uint32 index = 0;
+            log info, 4: "Me cago en simics: %d", value;
             if (value == 0x1) {
-                if(input.val != NULL) {
-                    file = fopen(input.val, "r");
-                    for (index = 0; index < BUFFER_SIZE; index++) {
-                        local uint8 char_read = fgetc(file);
-                        buffer[index].set_val(char_read);
-                        log info, 4: "loaded val = 0x%x @ buffer[%d]", char_read, index;
-                    }
-                    fclose(file);
-		        }
+                log info, 4: "Me cago en simics: %d", value;
+                local uint32 answer = plugin.my_iface.get_data(0x1);
+                log info, 4: "DEVICE ANSWER: %d", answer;
             }
 
         }

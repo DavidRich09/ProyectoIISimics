@@ -1,0 +1,26 @@
+/*
+  © 2017 Intel Corporation
+*/
+
+// my_iface-interface.dml - Skeleton code to base new DML interface types on
+
+// This is the DML definition of the my_iface interface. See
+// the "Defining a New Interface Type" section of the
+// "Simics Model Builder User's Guide" for further documentation.
+// The corresponding C definition can be found in
+// my_iface-interface.h.
+
+dml 1.4;
+
+header %{
+#include "../my_iface-interface/my_iface-interface.h"
+%}
+
+// Define the new interface type
+extern typedef struct {
+    uint32 (*get_data)(conf_object_t *obj, uint32 id);
+    void (*no_python_method)(conf_object_t *obj, size_t bufsize, void *buf);
+} my_iface_interface_t;
+
+
+extern const char *const MY_IFACE_INTERFACE;

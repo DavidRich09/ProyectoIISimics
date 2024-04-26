@@ -16,8 +16,26 @@ param documentation =
     + "on the documentation";
 
 import "utility.dml";
+import "../my_iface-interface/my_iface-interface.dml"; 
+
+header %{
+#include <stdio.h>
+#include <stdlib.h>
+%}
+
+extern FILE * fopen(const char *, const char *);
+extern int fgetc(FILE *);
+extern int ftell(FILE *);
+extern int fclose(FILE *);
+extern int fseek(FILE *,  int, int);
+extern typedef struct { } FILE;
+
+
+param BUFFER_SIZE = 3000000;
+session FILE * file;
 
 param byte_order = "little-endian";
+param path_img = "/home/geogardow/Desktop/Sistemas Empotrados/Taller PICe/academia-collaboration/simics-project/modules/x-device/img.bmp";
 
 // Memory-space connection
 connect target_mem_space {
@@ -29,5 +47,62 @@ connect target_mem_space {
     interface memory_space;
 }
 
-// DML Workshop
-// Add your code HERE!
+bank regs is function_mapped_bank{
+
+    param function = 1;
+
+    param register_size = 4;
+    register buffer_size size register_size @ 0x00{
+        is read_only;
+        param init_val = BUFFER_SIZE;
+    }
+
+    register cmd size register_size @ 0x04{
+        is write;
+        is read;
+        param init_val = 0x00;
+        method write(uint64 value){
+            default(value);
+            local uint32 index = 0;
+            local uint32 size_img = 0;
+            if (value == 0x1){
+                file = fopen(path_img, "rb");
+                fseek(file, 0, 2);
+                size_img = ftell(file);
+                fseek(file, 0, 0);
+                file_size.val = size_img;
+                log info, 4: "image size = %d", size_img;
+                for (index = 0; index < file_size.val; index++) {
+                    local uint8 char_read = fgetc(file);
+                    buffer[index].set_val(char_read);
+                    if(index < 15){
+                        log info, 4: "loaded val = 0x%x @ buffer[%d]", char_read, index;
+                    }
+                }
+                fclose(file);
+            }
+        }
+    }
+
+    register file_size size register_size @ 0x08{
+        is read;
+        is write;
+        param init_val = 0x00;
+    }
+    register buffer[i < BUFFER_SIZE + 1] size register_size @ i * 4 + 0x12{
+        is read_only;
+        param init_val = 0x00;
+    }
+
+}
+
+implement my_iface{
+    method get_data(uint32 id) -> (uint32){
+        //regs.cmd.write(id);
+        log info, 4: "a \n";
+        return regs.buffer[id].val;
+    }
+    
+}
+
+
