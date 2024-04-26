@@ -1,0 +1,31 @@
+/*
+  © 2017 Intel Corporation
+*/
+
+// control_Device_PCI-interface.dml - Skeleton code to base new DML interface types on
+
+// This is the DML definition of the control_Device_PCI interface. See
+// the "Defining a New Interface Type" section of the
+// "Simics Model Builder User's Guide" for further documentation.
+// The corresponding C definition can be found in
+// control_Device_PCI-interface.h.
+
+dml 1.4;
+
+header %{
+#include "../control_Device_PCI-interface/control_Device_PCI-interface.h"
+%}
+
+// Add any data types used by the interface here
+extern typedef struct {
+    int level;
+    char *name;
+} control_Device_PCI_data_t;
+
+// Define the new interface type
+extern typedef struct {
+    void (*start_operation)(conf_object_t *obj);
+    void (*clear_done)(conf_object_t *obj);
+} control_Device_PCI_interface_t;
+
+extern const char *const CONTROL_DEVICE_PCI_INTERFACE;

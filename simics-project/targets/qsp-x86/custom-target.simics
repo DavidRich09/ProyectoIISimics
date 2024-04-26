@@ -1,4 +1,6 @@
 run-command-file "%script%/firststeps.simics"
+run-command-file "%simics%/targets/qsp-x86/x.simics"
+
 load-module pci_capture_comp
 load-module module = pci-data-capture
 create-pci-capture-comp name = pci_capture
@@ -7,7 +9,7 @@ instantiate-components
 
 #For further debug
 #turning all verbose for the device
-#pci_capture.log-level 4
+pci_capture.log-level 4
 #write to the command reg for testing
 #pci_capture.dev->input = ""
 #board.mb.nb.pci_bus.mem_space.map

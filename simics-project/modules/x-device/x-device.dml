@@ -16,7 +16,12 @@ param documentation =
     + "on the documentation";
 
 import "utility.dml";
-import "../my_iface-interface/my_iface-interface.dml"; 
+
+
+//Libraries for interfaces
+import "simics/devs/signal.dml";
+import "simics/devs/memory-space.dml";
+import "../control_Device_PCI-interface/control_Device_PCI-interface.dml";
 
 header %{
 #include <stdio.h>
@@ -35,7 +40,7 @@ param BUFFER_SIZE = 3000000;
 session FILE * file;
 
 param byte_order = "little-endian";
-param path_img = "/home/geogardow/Desktop/Sistemas Empotrados/Taller PICe/academia-collaboration/simics-project/modules/x-device/img.bmp";
+param path_img = "../../img.bmp";
 
 // Memory-space connection
 connect target_mem_space {
@@ -96,13 +101,20 @@ bank regs is function_mapped_bank{
 
 }
 
-implement my_iface{
-    method get_data(uint32 id) -> (uint32){
-        //regs.cmd.write(id);
-        log info, 4: "a \n";
-        return regs.buffer[id].val;
+port control_in {
+
+    param desc = "Control X-Device from PCI";
+
+    implement control_Device_PCI {
+
+        method start_operation(){
+
+            log info, 4: "Receving a request";
+
+        }
+
     }
-    
+
 }
 
 

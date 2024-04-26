@@ -15,8 +15,13 @@ dml 1.4;
 
 
 device pci_data_capture;
-import "../my_iface-interface/my_iface-interface.dml"; 
 import "utility.dml";
+
+//Libraries for interfaces
+import "simics/devs/signal.dml";
+import "simics/devs/memory-space.dml";
+import "../control_Device_PCI-interface/control_Device_PCI-interface.dml";
+
 param desc = "PCI data capture";
 param documentation = "This simulated PCI device recieves a file path in the attribute and displays the first 8 bytes of the attribute file";
 
@@ -32,9 +37,7 @@ extern int fgetc(FILE *);
 extern int fclose(FILE *);
 extern typedef struct { } FILE;
 
-connect plugin {
-    interface my_iface;
-}
+
 
 /*
     imports the basic pci functionality
@@ -131,8 +134,7 @@ bank regs is function_mapped_bank {
             log info, 4: "Me cago en simics: %d", value;
             if (value == 0x1) {
                 log info, 4: "Me cago en simics: %d", value;
-                local uint32 answer = plugin.my_iface.get_data(0x1);
-                log info, 4: "DEVICE ANSWER: %d", answer;
+                compute_unit_control.start_operation();
             }
 
         }
@@ -143,4 +145,21 @@ bank regs is function_mapped_bank {
         is read_only;
         param init_val = 0x0;
     }
+}
+
+connect compute_unit_control {
+
+    param internal = true;
+
+    interface control_Device_PCI;
+
+    method start_operation(){
+        if(!obj){
+            log info, 4: "No device connected";
+        }
+
+        this.control_Device_PCI.start_operation();
+
+    }
+
 }
