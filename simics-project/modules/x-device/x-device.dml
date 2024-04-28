@@ -36,11 +36,11 @@ extern int fseek(FILE *,  int, int);
 extern typedef struct { } FILE;
 
 
-param BUFFER_SIZE = 3000000;
+param BUFFER_SIZE = 256;
 session FILE * file;
 
 param byte_order = "little-endian";
-param path_img = "../../img.bmp";
+param path_img = "/home/richmond/Documents/GitHub/ProyectoIISimics/simics-project/img.bmp";
 
 // Memory-space connection
 connect target_mem_space {
@@ -52,11 +52,47 @@ connect target_mem_space {
     interface memory_space;
 }
 
+
+/*
+    simulates input data received by the device
+    recieves a path to the file that will be populate in this device registers
+*/
+
+attribute img_path {
+    param type = "s";
+    session char* val;
+    session int len;
+    //get handler, gets called with called from CLI or the get interface
+    method get() -> (attr_value_t) default {
+        return SIM_make_attr_string(val != NULL ? val : "");
+      
+    }
+
+    //set handler, gets called with called from CLI or the set interface
+    method set(attr_value_t attr) throws default {
+        local const char* attr_str = SIM_attr_string(attr);
+        set_string(attr_str);
+
+    }
+
+    /* 
+        set_string: copies the parmater char * to the internal char structure
+        the old stored value is deleted 
+    */
+    method set_string(const char *ptr) {
+        if (len > 0) {delete val;}
+        len = strlen(ptr);
+        val = new char[len + 1];
+        strcpy(val, ptr);
+    }
+} 
+
 bank regs is function_mapped_bank{
 
     param function = 1;
-
     param register_size = 4;
+    param register_buffer_size = 1;
+
     register buffer_size size register_size @ 0x00{
         is read_only;
         param init_val = BUFFER_SIZE;
@@ -67,17 +103,18 @@ bank regs is function_mapped_bank{
         is read;
         param init_val = 0x00;
         method write(uint64 value){
+            log info, 4: "writting %d in cmd", value;
             default(value);
             local uint32 index = 0;
             local uint32 size_img = 0;
             if (value == 0x1){
-                file = fopen(path_img, "rb");
+                file = fopen(img_path.val, "rb");
                 fseek(file, 0, 2);
                 size_img = ftell(file);
                 fseek(file, 0, 0);
                 file_size.val = size_img;
                 log info, 4: "image size = %d", size_img;
-                for (index = 0; index < file_size.val; index++) {
+                for (index = 0; index < 255; index++) {
                     local uint8 char_read = fgetc(file);
                     buffer[index].set_val(char_read);
                     if(index < 15){
@@ -90,29 +127,27 @@ bank regs is function_mapped_bank{
     }
 
     register file_size size register_size @ 0x08{
-        is read;
-        is write;
+        is read_only;
         param init_val = 0x00;
     }
-    register buffer[i < BUFFER_SIZE + 1] size register_size @ i * 4 + 0x12{
+
+    register buffer[i < BUFFER_SIZE] size register_buffer_size @ i + 0x12{
         is read_only;
         param init_val = 0x00;
     }
 
 }
 
-port control_in {
+implement control_Device_PCI {
 
-    param desc = "Control X-Device from PCI";
+    method start_read(uint32 value){
+        log info, 4: "Device Interface in start_read %d", value;
+        local void *aux;
+        regs.cmd.write(value);
+    }
 
-    implement control_Device_PCI {
-
-        method start_operation(){
-
-            log info, 4: "Receving a request";
-
-        }
-
+    method read_buffer(uint8 index) -> (uint8){
+        return regs.buffer[index].get_val();
     }
 
 }

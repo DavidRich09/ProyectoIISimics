@@ -22,13 +22,32 @@
 extern "C" {
 #endif
 
+/* If you need to define new struct types, a definition like this will make it
+   possible to allocate such structs from Python using control_Device_PCI_data_t().
 
+   Before doing this, you will have to load the control_Device_PCI_interface
+   Simics module, and import the control_Device_PCI_interface Python module. */
+typedef struct {
+        int level;
+        char *name;
+} control_Device_PCI_data_t;
+SIM_PY_ALLOCATABLE(control_Device_PCI_data_t);
 
 /* This defines a new interface type. Its corresponding C data type will be
    called "control_Device_PCI_interface_t". */
 SIM_INTERFACE(control_Device_PCI) {
-    void (*start_operation)(conf_object_t *obj);
-    void (*clear_done)(conf_object_t *obj);
+        bool (*example_method)(conf_object_t *obj, int id,
+                               control_Device_PCI_data_t *data);
+#ifndef PYWRAP
+        /* methods that cannot be exported to Python, for example as it refers
+           to unknown data types, must be enclosed by "#ifndef PYWRAP" ...
+           "#endif". See the "Restrictions" subsection of "Defining New
+           Interface Types" mentioned above. */
+        void (*no_python_method)(conf_object_t *obj, size_t bufsize, void *buf);
+        void (*start_read)(conf_object_t *obj, uint32 value);
+        uint8 (*read_buffer)(conf_object_t *obj, uint8 index);
+
+#endif
 };
 
 /* Use a #define like this whenever you need to use the name of the interface

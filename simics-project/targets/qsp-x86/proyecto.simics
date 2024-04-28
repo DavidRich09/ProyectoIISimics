@@ -1,0 +1,22 @@
+run-command-file "%script%/firststeps.simics"
+
+# Load device 
+board.mb.cpu0.core[0][0].info
+run 2 s
+board.mb.phys_mem.map
+@SIM_create_object("x_device", "device_image_capture", target_mem_space=conf.board.mb.phys_mem)
+
+# Load PCI
+load-module pci_capture_comp
+load-module module = pci-data-capture
+create-pci-capture-comp name = pci_capture
+connect pci_capture.pci_bus cnt1 = "board.mb.nb.pci_slot[1]"
+
+instantiate-components
+
+# Connect attibutes
+pci_capture.dev->conexion_to_Device = device_image_capture
+device_image_capture->img_path = "/home/richmond/Documents/GitHub/ProyectoIISimics/simics-project/img.bmp"
+
+# Logs
+pci_capture.log-level 4

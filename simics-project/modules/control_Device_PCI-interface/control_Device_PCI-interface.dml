@@ -24,8 +24,12 @@ extern typedef struct {
 
 // Define the new interface type
 extern typedef struct {
-    void (*start_operation)(conf_object_t *obj);
-    void (*clear_done)(conf_object_t *obj);
+    bool (*example_method)(conf_object_t *obj, int id,
+                           control_Device_PCI_data_t *data);
+    void (*no_python_method)(conf_object_t *obj, size_t bufsize, void *buf);
+    void (*start_read)(conf_object_t *obj, uint32 value);
+    uint8 (*read_buffer)(conf_object_t *obj, uint8 index);
+
 } control_Device_PCI_interface_t;
 
 extern const char *const CONTROL_DEVICE_PCI_INTERFACE;
