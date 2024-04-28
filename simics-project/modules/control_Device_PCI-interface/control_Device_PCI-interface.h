@@ -45,7 +45,9 @@ SIM_INTERFACE(control_Device_PCI) {
            Interface Types" mentioned above. */
         void (*no_python_method)(conf_object_t *obj, size_t bufsize, void *buf);
         void (*start_read)(conf_object_t *obj, uint32 value);
-        uint8 (*read_buffer)(conf_object_t *obj, uint8 index);
+        uint16 (*read_buffer)(conf_object_t *obj, uint16 index);
+        void (*move_offeset)(conf_object_t *obj);
+        uint32 (*read_file_size)(conf_object_t *obj);
 
 #endif
 };

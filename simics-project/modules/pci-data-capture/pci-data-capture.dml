@@ -31,14 +31,6 @@ header %{
 #include <stdlib.h>
 %}
 
-//extern statements for the usage of this library function calls of the imports defined above
-extern FILE * fopen(const char *, const char *);
-extern int fgetc(FILE *);
-extern int fclose(FILE *);
-extern typedef struct { } FILE;
-
-
-
 /*
     imports the basic pci functionality
     template is applied for the pci_device 
@@ -46,49 +38,10 @@ extern typedef struct { } FILE;
 import "pci/common.dml";
 is pci_device;
 
-
 param pci_hotplug = true;
 
 // constant size of buffer
 param BUFFER_SIZE = 256;
-
-//variable with the file handle
-session FILE * file;
-
-/*
-    simulates input data received by the device
-    recieves a path to the file that will be populate in this device registers
-*/
-
-attribute input {
-    param type = "s";
-    session char* val;
-    session int len;
-    //get handler, gets called with called from CLI or the get interface
-    method get() -> (attr_value_t) default {
-        return SIM_make_attr_string(val != NULL ? val : "");
-      
-    }
-
-    //set handler, gets called with called from CLI or the set interface
-    method set(attr_value_t attr) throws default {
-        local const char* attr_str = SIM_attr_string(attr);
-        set_string(attr_str);
-
-    }
-
-    /* 
-        set_string: copies the parmater char * to the internal char structure
-        the old stored value is deleted 
-    */
-    method set_string(const char *ptr) {
-        if (len > 0) {delete val;}
-        len = strlen(ptr);
-        val = new char[len + 1];
-        strcpy(val, ptr);
-    }
-} 
-
 
 bank pci_config {
 
@@ -114,7 +67,7 @@ bank regs is function_mapped_bank {
        which should match with the map_func param in one BAR */
     param function = 1;
 
-    register test_register size 4 @ 0x0 {
+    register file_size size 4 @ 0x0 {
         param init_val = 0x0;
     }
 
@@ -131,10 +84,17 @@ bank regs is function_mapped_bank {
         //called on write by the processor
         method write(uint64 value) {
             local uint32 index = 0;
-            log info, 4: "Me cago en simics: %d", value;
+            log info, 4: "The PCI recieves the operation: %d", value;
             if (value == 0x1) {
-                log info, 4: "Me cago en simics: %d", value;
-                compute_unit_control.start_operation();
+                log info, 4: "PCI operation: %d", value;
+                conexion_to_Device.start_read(value);
+              
+            } else if(value == 0x2){
+                log info, 4: "PCI operation: %d", value;
+                conexion_to_Device.read_buffer_device();
+            } else if (value == 0x3){
+                log info, 4: "PCI operation: %d", value;
+                conexion_to_Device.read_file_size();              
             }
 
         }
@@ -147,19 +107,43 @@ bank regs is function_mapped_bank {
     }
 }
 
-connect compute_unit_control {
+connect conexion_to_Device {
 
-    param internal = true;
+    param internal = false;
 
-    interface control_Device_PCI;
-
-    method start_operation(){
-        if(!obj){
-            log info, 4: "No device connected";
-        }
-
-        this.control_Device_PCI.start_operation();
-
+    interface control_Device_PCI {
+        param required = true;
     }
 
+    method start_read(uint32 value){
+        if(!obj){
+            log error: "Model setup is inconsistent! (connect %s has no object)", 
+                       this.qname; 
+            return;
+        }
+        this.control_Device_PCI.start_read(value);
+    }
+
+    method read_buffer_device(){
+        if(!obj){
+            log error: "Model setup is inconsistent! (connect %s has no object)", 
+                       this.qname; 
+            return;
+        }
+        local uint16 index = 0;
+        this.control_Device_PCI.move_offeset();
+        for(index = 0; index < BUFFER_SIZE; index++){
+            regs.buffer[index].set_val(this.control_Device_PCI.read_buffer(index));
+        }
+        log info, 4: "End read buffer device";   
+    }
+
+    method read_file_size(){
+        if(!obj){
+            log error: "Model setup is inconsistent! (connect %s has no object)", 
+                       this.qname; 
+            return;
+        }
+        regs.file_size.set_val(this.control_Device_PCI.read_file_size());
+    }
 }

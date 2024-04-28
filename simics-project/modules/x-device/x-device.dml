@@ -105,23 +105,10 @@ bank regs is function_mapped_bank{
         method write(uint64 value){
             log info, 4: "writting %d in cmd", value;
             default(value);
-            local uint32 index = 0;
-            local uint32 size_img = 0;
             if (value == 0x1){
-                file = fopen(img_path.val, "rb");
-                fseek(file, 0, 2);
-                size_img = ftell(file);
-                fseek(file, 0, 0);
-                file_size.val = size_img;
-                log info, 4: "image size = %d", size_img;
-                for (index = 0; index < 255; index++) {
-                    local uint8 char_read = fgetc(file);
-                    buffer[index].set_val(char_read);
-                    if(index < 15){
-                        log info, 4: "loaded val = 0x%x @ buffer[%d]", char_read, index;
-                    }
-                }
-                fclose(file);
+                open_file();
+            } else if (value == 0x2){
+                read_file();
             }
         }
     }
@@ -131,10 +118,41 @@ bank regs is function_mapped_bank{
         param init_val = 0x00;
     }
 
-    register buffer[i < BUFFER_SIZE] size register_buffer_size @ i + 0x12{
+    register file_offset size register_size @ 0x12{
+        is read;
+        is write;
+        param init_val = 0x00;
+    }
+
+    register buffer[i < BUFFER_SIZE] size register_buffer_size @ i + 0x16{
         is read_only;
         param init_val = 0x00;
     }
+
+    method open_file(){
+        file = fopen(img_path.val, "rb");
+        fseek(file, 0, 2);
+        local uint32 size_img = ftell(file);
+        fseek(file, 0, 0);
+        file_size.val = size_img;
+        log info, 4: "Tamaño de la imagen = %d", size_img;
+        fclose(file);
+    }
+
+    method read_file(){
+        file = fopen(img_path.val, "rb");
+        fseek(file, file_offset.val, 0);
+        for (local uint32 index = 0; index < 256; index++) {
+            local uint8 char_read = fgetc(file);
+            buffer[index].set_val(char_read);
+            if(index < 15){
+                log info, 3: "Valor cargado = 0x%x @ buffer[%d]", char_read, index;
+            }
+        }
+        file_offset.set_val(file_offset.get_val()  + 256);
+        fclose(file);
+    }
+
 
 }
 
@@ -142,12 +160,19 @@ implement control_Device_PCI {
 
     method start_read(uint32 value){
         log info, 4: "Device Interface in start_read %d", value;
-        local void *aux;
         regs.cmd.write(value);
     }
 
-    method read_buffer(uint8 index) -> (uint8){
+    method read_buffer(uint16 index) -> (uint16){
         return regs.buffer[index].get_val();
+    }
+
+    method move_offeset(){
+        regs.cmd.write(0x2);
+    }
+
+    method read_file_size() -> (uint32){
+        return regs.file_size.get_val();
     }
 
 }
