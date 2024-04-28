@@ -413,8 +413,7 @@ uint32_t read_register(uint32_t dir) {
     uint32_t test_register_offset;
 
     pci_capture_data = (struct pci_driver_internal_data *) pci_get_drvdata(pci_dev);
-    test_register_offset = 0x0;
-    ret = ioread32(pci_capture_data->hwmem + test_register_offset);
+    ret = ioread32(pci_capture_data->hwmem + dir);
 
     return ret;
 }
@@ -424,8 +423,7 @@ void write_register(uint32_t value, uint32_t dir) {
     uint32_t test_register_offset;
 
     pci_capture_data = (struct pci_driver_internal_data *) pci_get_drvdata(pci_dev);
-    test_register_offset = 0x0;
-    iowrite32(value, pci_capture_data->hwmem + test_register_offset);
+    iowrite32(value, pci_capture_data->hwmem + dir);
 }
 
 MODULE_LICENSE("GPL");
