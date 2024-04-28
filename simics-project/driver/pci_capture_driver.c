@@ -352,44 +352,51 @@ static ssize_t write_pci_capture_chr_dev(struct file *pfile, const char __user *
 static long ioctl_pci_capture_chr_dev(struct file *file, unsigned int cmd, unsigned long arg) {
     int error;
     uint32_t buffer;
-    uint32_t *user_ptr;
 
     switch (cmd) {
         case WR_VALUE:
-            // Obtener la dirección del usuario
-            user_ptr = (uint32_t *)arg;
-
-            // Leer el valor del usuario
-            error = copy_from_user(&buffer, user_ptr, sizeof(buffer));
-            if (error != 0) {
-                printk(KERN_ERR "IOCTL write data failed. Error: %d", error);
+            {
+                struct write_args {
+                    uint32_t value;
+                    uint32_t dir;
+                };
+                struct write_args args;
+                error = copy_from_user(&args, (struct write_args *)arg, sizeof(args));
+                if (error != 0) {
+                    printk(KERN_ERR "IOCTL write data failed. Error: %d", error);
+                    return -EFAULT;
+                }
+                printk(KERN_INFO "IOCTL write data received: Value=0x%x, Dir=0x%x", args.value, args.dir);
+                
+                write_register(args.value, args.dir);
             }
-            else {
-                printk(KERN_INFO "IOCTL data received: 0x%x", buffer);
-            }
-
-            // Escribir en la dirección proporcionada
-            write_test_register(buffer);
             break;
 
         case RD_VALUE:
-            // Obtener la dirección del usuario
-            user_ptr = (uint32_t *)arg;
+            {
+                uint32_t dir;
+                error = copy_from_user(&dir, (uint32_t *)arg, sizeof(dir));
+                if (error != 0) {
+                    printk(KERN_ERR "IOCTL read data failed. Error: %d", error);
+                    return -EFAULT;
+                }
 
-            // Leer desde la dirección proporcionada
-            buffer = read_test_register();
-            error = copy_to_user(user_ptr, &buffer, sizeof(buffer));
-            if (error != 0) {
-                printk(KERN_ERR "IOCTL failed while sending data to user. Error: %d\n", error);
+                buffer = read_register(dir);
+                error = copy_to_user((uint32_t *)arg, &buffer, sizeof(buffer));
+                if (error != 0) {
+                    printk(KERN_ERR "IOCTL failed while sending data to user. Error: %d\n", error);
+                    return -EFAULT;
+                }
+                printk(KERN_INFO "IOCTL read data from Dir=0x%x: 0x%x", dir, buffer);
             }
             break;
 
         default:
             printk(KERN_ERR "IOCTL command not recognized");
-            error = ENOTTY;
+            return -ENOTTY;
     }
 
-    return error;
+    return 0;
 }
 
 static int uevent_pci_capture_chr_dev(struct device *dev, struct kobj_uevent_env *env) {
