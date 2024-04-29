@@ -20,6 +20,7 @@ int main()
     printf(">>> Opening character device\n");
     fd = open(chr_dev_name, O_RDWR);
     if (fd < 0) {
+        fprintf(stderr, "fopen() failed: %s\n", strerror(errno));
         printf("Cannot open character device file...\n");
         return 0;
     }
