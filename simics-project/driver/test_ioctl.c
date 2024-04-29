@@ -21,8 +21,7 @@ int main()
     printf(">>> Opening character device\n");
     fd = open(chr_dev_name, O_RDWR);
     if (fd < 0) {
-        perror("open(chr_dev_name, O_RDWR):");
-        fprintf(stderr, "fopen() failed: %s\n", strerror(errno));
+        perror("open(chr_dev_name, O_RDWR):")
         printf("Cannot open character device file...\n");
         return 0;
     }
