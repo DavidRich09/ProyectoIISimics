@@ -6,6 +6,7 @@
 #include <fcntl.h>
 #include <unistd.h>
 #include <sys/ioctl.h>
+#include <errno.h>
 
 #define CHARACTER_DEVICE_DRIVER_PATH "/dev/pci_capture_chr_dev-0"
 #define WR_VALUE _IOW('a','a',int32_t *)
@@ -20,6 +21,7 @@ int main()
     printf(">>> Opening character device\n");
     fd = open(chr_dev_name, O_RDWR);
     if (fd < 0) {
+        perror("open(chr_dev_name, O_RDWR):");
         fprintf(stderr, "fopen() failed: %s\n", strerror(errno));
         printf("Cannot open character device file...\n");
         return 0;
