@@ -67,7 +67,7 @@ bank regs is function_mapped_bank {
        which should match with the map_func param in one BAR */
     param function = 1;
 
-    register file_size size 4 @ 0x0 {
+    register test_register size 4 @ 0x0 {
         param init_val = 0x0;
     }
 
@@ -79,16 +79,17 @@ bank regs is function_mapped_bank {
     //stored in the input attribute
     register cmd size 4 @ 0x14 {
         is write;
+        is read;
         param init_val = 0x0;
         
         //called on write by the processor
         method write(uint64 value) {
+            default(value);
             local uint32 index = 0;
             log info, 4: "The PCI recieves the operation: %d", value;
             if (value == 0x1) {
                 log info, 4: "PCI operation: %d", value;
                 conexion_to_Device.start_read(value);
-              
             } else if(value == 0x2){
                 log info, 4: "PCI operation: %d", value;
                 conexion_to_Device.read_buffer_device();
@@ -102,7 +103,8 @@ bank regs is function_mapped_bank {
     
     //for communicating initial 8 bytes of the file after command=1 and input attr value is populated
     register buffer[i < BUFFER_SIZE] size 1 @ 0x18 + i {
-        is read_only;
+        is read;
+        is write;
         param init_val = 0x0;
     }
 }
@@ -144,6 +146,6 @@ connect conexion_to_Device {
                        this.qname; 
             return;
         }
-        regs.file_size.set_val(this.control_Device_PCI.read_file_size());
+        regs.test_register.set_val(this.control_Device_PCI.read_file_size());
     }
 }

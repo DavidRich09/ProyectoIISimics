@@ -374,20 +374,24 @@ static long ioctl_pci_capture_chr_dev(struct file *file, unsigned int cmd, unsig
 
         case RD_VALUE:
             {
-                uint32_t dir;
-                error = copy_from_user(&dir, (uint32_t *)arg, sizeof(dir));
+                struct read_args {
+                    uint32_t value;
+                    uint32_t dir;
+                };
+                struct read_args args;
+                error = copy_from_user(&args, (struct read_args *)arg, sizeof(args));
                 if (error != 0) {
                     printk(KERN_ERR "IOCTL read data failed. Error: %d", error);
                     return -EFAULT;
                 }
 
-                buffer = read_register(dir);
+                buffer = read_register(args.dir);
                 error = copy_to_user((uint32_t *)arg, &buffer, sizeof(buffer));
                 if (error != 0) {
                     printk(KERN_ERR "IOCTL failed while sending data to user. Error: %d\n", error);
                     return -EFAULT;
                 }
-                printk(KERN_INFO "IOCTL read data from Dir=0x%x: 0x%x", dir, buffer);
+                printk(KERN_INFO "IOCTL read data from Dir=0x%x: 0x%x", args.dir, buffer);
             }
             break;
 
