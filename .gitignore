@@ -1,0 +1,9 @@
+simics-project/*
+
+# Allow subfolders
+!simics-project/*/
+
+bin/
+targets/
+linux64/
+.project-properties/
