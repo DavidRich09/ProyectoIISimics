@@ -8,6 +8,31 @@
 
 import stest
 import dev_util as du
+import pyobj
+
+# Create a simple device class implementing the signal interface
+class FakeInterface(pyobj.ConfObject):
+
+    class start_read(pyobj.SimpleAttribute(1, 'i')):
+        val = 0
+    
+    class read_buffer_device(pyobj.SimpleAttribute(1, 'i')):
+        val = 0
+    
+    class read_file_size(pyobj.SimpleAttribute(1, 'i')):
+        val = 0
+
+    class control_Device_PCI(pyobj.Interface):
+        def start_read(self):
+            self._up.raised.start_read += 1
+        def read_buffer_device (self):
+            self._up.raised.read_buffer_device += 1
+        def read_file_size (self):
+            self._up.raised.read_file_size += 1
+
+# Create a device instance of the fake PIC
+#fake_interface = pre_conf_object('fake_interface', 'FakeInterface')
+fake_interface = SIM_create_object('FakeInterface', 'fake_interface', [])
 
 # Set up a PCI bus and a sample PCI device
 pci_bridge = du.Dev([du.PciBridge])  # Non-used PCI bridge, required by bus
@@ -23,6 +48,8 @@ pci_bus = SIM_create_object('pci-bus', 'pci_bus', [['conf_space', pci_conf],
 pci = SIM_create_object('pci_data_capture', 'pci_data_capture',
                         [['pci_bus', pci_bus]])
 
+pci.conexion_to_Device = fake_interface
+
 # Test the PCI vendor and device IDs
 def test_ids():
     stest.expect_equal(pci.attr.pci_config_vendor_id, 0x104c, "Bad vendor ID")
@@ -30,26 +57,42 @@ def test_ids():
 
 # Test the registers of the device
 def test_regs():
-    version = du.Register_LE((pci, 1, 0x10))
-    stest.expect_equal(version.read(), 0x4711)
+    buffer_size = du.Register_LE((pci, 1, 0x4))
+    stest.expect_equal(buffer_size.read(), 256)
+
+    cmd_reg = du.Register_LE((pci, 1, 0x14))
+    stest.expect_equal(cmd_reg.read(), 0x0)
+
+    buffer_reg = du.Register_LE((pci, 1, 0x18))
+    stest.expect_equal(buffer_reg.read(), 0x0)
 
 # Test setting BAR to map the device in memory
-def test_mapping():
-    cmd_reg = du.Register((pci, 'pci_config', 0x4), 0x2)  # PCI command register
-    bar_reg = du.Register((pci, 'pci_config', 0x10), 0x4) # PCI BAR register
+def test_write_and_read():
+    cmd_reg = du.Register_LE((pci, 1, 0x14))
+    buffer_reg = du.Register_LE((pci, 1, 0x18))
 
-    addr = 0x100
-    cmd_reg.write(2)     # Enable memory access
-    bar_reg.write(addr)  # Map bank at addr
-    stest.expect_equal(pci_mem.attr.map[0][1], pci.bank.reg,
-                       "PCI device should have been mapped")
+    stest.expect_exception(cmd_reg.write, 0x1, Exception)
+    stest.expect_equal(pci.conexion_to_Device.start_read, 1)
 
-    mem_read = pci_mem.iface.memory_space.read
-    stest.expect_equal(du.tuple_to_value_le(mem_read(None, addr + 0x10, 4, 0)),
-                       0x4711, "Version should be read")
+    stest.expect_exception(cmd_reg.write, 0x2, Exception)
+    stest.expect_equal(pci.conexion_to_Device.read_buffer_device, 1)
 
+    stest.expect_exception(cmd_reg.write, 0x3, Exception)
+    stest.expect_equal(pci.conexion_to_Device.read_file_size, 1)
+
+    cmd_reg.write(0x4)
+    stest.expect_equal(cmd_reg.read(), 0x4)
+
+    buffer_reg.write(0xff)
+    stest.expect_equal(buffer_reg.read(), 0xff)
+
+    
+stest.trap_log('info', obj = None)
+stest.collect_failures()
 test_ids()
 test_regs()
-test_mapping()
+test_write_and_read()
+stest.check_failures()
+
 
 print("All tests passed.")

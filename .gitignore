@@ -1,0 +1,4 @@
+simics-project/
+!modules/**
+!driver/**
+
