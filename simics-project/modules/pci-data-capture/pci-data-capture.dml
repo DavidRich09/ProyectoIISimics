@@ -67,7 +67,7 @@ bank regs is function_mapped_bank {
        which should match with the map_func param in one BAR */
     param function = 1;
 
-    register test_register size 4 @ 0x0 {
+    register file_size size 4 @ 0x0 {
         param init_val = 0x0;
     }
 
@@ -146,6 +146,6 @@ connect conexion_to_Device {
                        this.qname; 
             return;
         }
-        regs.test_register.set_val(this.control_Device_PCI.read_file_size());
+        regs.file_size.set_val(this.control_Device_PCI.read_file_size());
     }
 }

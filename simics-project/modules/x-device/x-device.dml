@@ -40,7 +40,7 @@ param BUFFER_SIZE = 256;
 session FILE * file;
 
 param byte_order = "little-endian";
-param path_img = "/home/richmond/Documents/GitHub/ProyectoIISimics/simics-project/img.bmp";
+param path_img = "img.bmp";
 
 // Memory-space connection
 connect target_mem_space {

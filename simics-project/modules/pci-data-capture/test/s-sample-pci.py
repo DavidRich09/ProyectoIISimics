@@ -10,30 +10,6 @@ import stest
 import dev_util as du
 import pyobj
 
-# Create a simple device class implementing the signal interface
-class FakeInterface(pyobj.ConfObject):
-
-    class start_read(pyobj.SimpleAttribute(1, 'i')):
-        val = 0
-    
-    class read_buffer_device(pyobj.SimpleAttribute(1, 'i')):
-        val = 0
-    
-    class read_file_size(pyobj.SimpleAttribute(1, 'i')):
-        val = 0
-
-    class control_Device_PCI(pyobj.Interface):
-        def start_read(self):
-            self._up.raised.start_read += 1
-        def read_buffer_device (self):
-            self._up.raised.read_buffer_device += 1
-        def read_file_size (self):
-            self._up.raised.read_file_size += 1
-
-# Create a device instance of the fake PIC
-#fake_interface = pre_conf_object('fake_interface', 'FakeInterface')
-fake_interface = SIM_create_object('FakeInterface', 'fake_interface', [])
-
 # Set up a PCI bus and a sample PCI device
 pci_bridge = du.Dev([du.PciBridge])  # Non-used PCI bridge, required by bus
 pci_conf = SIM_create_object('memory-space', 'pci_conf', [])
@@ -48,7 +24,11 @@ pci_bus = SIM_create_object('pci-bus', 'pci_bus', [['conf_space', pci_conf],
 pci = SIM_create_object('pci_data_capture', 'pci_data_capture',
                         [['pci_bus', pci_bus]])
 
-pci.conexion_to_Device = fake_interface
+target_mem_space_test = SIM_create_object ('memory-space','target_mem_space',[])
+dev = SIM_create_object('x_device', 'x_device', [['target_mem_space', target_mem_space_test],
+                                                 ['img_path', 'img.bmp']])
+
+pci.conexion_to_Device = dev
 
 # Test the PCI vendor and device IDs
 def test_ids():
@@ -57,34 +37,42 @@ def test_ids():
 
 # Test the registers of the device
 def test_regs():
+    # Verify that the buffer size is loaded and zero
     buffer_size = du.Register_LE((pci, 1, 0x4))
     stest.expect_equal(buffer_size.read(), 256)
 
+    # Verify that the command register is loaded and zero
     cmd_reg = du.Register_LE((pci, 1, 0x14))
     stest.expect_equal(cmd_reg.read(), 0x0)
 
+    # Verify that the file size is loaded and zero
     buffer_reg = du.Register_LE((pci, 1, 0x18))
     stest.expect_equal(buffer_reg.read(), 0x0)
 
-# Test setting BAR to map the device in memory
 def test_write_and_read():
+
+    # Test setting BAR to map the device in memory
     cmd_reg = du.Register_LE((pci, 1, 0x14))
     buffer_reg = du.Register_LE((pci, 1, 0x18))
+    file_size = du.Register_LE((pci, 1, 0x00))
 
-    stest.expect_exception(cmd_reg.write, 0x1, Exception)
-    stest.expect_equal(pci.conexion_to_Device.start_read, 1)
+    # Verify that the size of file is zero sice it has not been read yet
+    stest.expect_equal(file_size.read(), 0)
 
-    stest.expect_exception(cmd_reg.write, 0x2, Exception)
-    stest.expect_equal(pci.conexion_to_Device.read_buffer_device, 1)
+    # Writes a 0x1 to the device, which loads the file size to the x-device
+    cmd_reg.write(0x1)
 
-    stest.expect_exception(cmd_reg.write, 0x3, Exception)
-    stest.expect_equal(pci.conexion_to_Device.read_file_size, 1)
+    # Writes a 0x3 to the device, which loads the file size to the PCI device
+    cmd_reg.write(0x3)
 
-    cmd_reg.write(0x4)
-    stest.expect_equal(cmd_reg.read(), 0x4)
+    # Verify that the size of file is not zero since it has been read
+    stest.expect_equal(file_size.read(), 180138)
 
-    buffer_reg.write(0xff)
-    stest.expect_equal(buffer_reg.read(), 0xff)
+    # Writes a 0x2 to the device, which loads the image values to the x-device and transfers the buffer to the PCI device
+    cmd_reg.write(0x2)
+
+    # Verify that the buffer is not empty
+    stest.expect_equal(buffer_reg.read(), 0xbfaa4d42)
 
     
 stest.trap_log('info', obj = None)
