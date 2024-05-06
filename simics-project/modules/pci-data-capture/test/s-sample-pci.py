@@ -59,6 +59,9 @@ def test_write_and_read():
     # Verify that the size of file is zero sice it has not been read yet
     stest.expect_equal(file_size.read(), 0)
 
+    # Verify that the buffer is empty
+    stest.expect_equal(buffer_reg.read(), 0)
+
     # Writes a 0x1 to the device, which loads the file size to the x-device
     cmd_reg.write(0x1)
 

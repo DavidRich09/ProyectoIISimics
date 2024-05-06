@@ -1,4 +1,4 @@
-$disk0_image = "project_cv.craff"
+$disk0_image = "project_all_v2.craff"
 run-command-file "%script%/firststeps.simics"
 
 # Load device 
@@ -17,7 +17,7 @@ instantiate-components
 
 # Connect attibutes
 pci_capture.dev->conexion_to_Device = device_image_capture
-device_image_capture->img_path = "./img.bmp"
+device_image_capture->img_path = "img.bmp"
 
 # Logs
 pci_capture.log-level 4
