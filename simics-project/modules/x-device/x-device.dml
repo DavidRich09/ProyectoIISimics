@@ -40,7 +40,6 @@ param BUFFER_SIZE = 256;
 session FILE * file;
 
 param byte_order = "little-endian";
-param path_img = "img.bmp";
 
 // Memory-space connection
 connect target_mem_space {
@@ -52,11 +51,6 @@ connect target_mem_space {
     interface memory_space;
 }
 
-
-/*
-    simulates input data received by the device
-    recieves a path to the file that will be populate in this device registers
-*/
 
 attribute img_path {
     param type = "s";
@@ -93,16 +87,31 @@ bank regs is function_mapped_bank{
     param register_size = 4;
     param register_buffer_size = 1;
 
+    /**
+    This register is used to store the size of the buffer.
+    */
+
     register buffer_size size register_size @ 0x00{
         is read;
         is write;
         param init_val = 0x0;
     }
 
+    /**
+    This register is used to store the command that will be executed.
+    */
+
     register cmd size register_size @ 0x04{
         is write;
         is read;
         param init_val = 0x00;
+        /**
+        This method is used to write the cmd register.
+        If the value is 0x1, the open_file method is called.
+        If the value is 0x2, the read_file method is called.
+        params: uint64 value
+        return: None
+        */
         method write(uint64 value){
             log info, 4: "writting %d in cmd", value;
             default(value);
@@ -114,10 +123,18 @@ bank regs is function_mapped_bank{
         }
     }
 
+    /**
+    This register is used to store the size of the img file that will be loaded in the buffer.
+    */
+
     register file_size size register_size @ 0x08{
         is read_only;
         param init_val = 0x00;
     }
+
+    /**
+    This register is used to store the offset of the file that will be read.
+    */
 
     register file_offset size register_size @ 0x12{
         is read;
@@ -125,10 +142,21 @@ bank regs is function_mapped_bank{
         param init_val = 0x00;
     }
 
+    /**
+    This register is used to store the path of the img file that will be loaded in the buffer.
+    */
+
     register buffer[i < BUFFER_SIZE] size register_buffer_size @ i + 0x16{
         is read_only;
         param init_val = 0x00;
     }
+
+    /**
+    This method open the img and get the file size then save it in file_size register.
+    Also reset file_offset register to 0.
+    params: None
+    return: None
+    */
 
     method open_file(){
         if(img_path.val != NULL){
@@ -145,6 +173,12 @@ bank regs is function_mapped_bank{
         }
     }
 
+    /**
+    This method read 256 bytes from the img file and save it in the buffer.
+    Also increment the file_offset register by 256 and verify if the file is not at the end.
+    params: None
+    return: None    
+    */
     method read_file(){
         file = fopen(img_path.val, "rb");
         fseek(file, file_offset.val, 0);
@@ -163,20 +197,48 @@ bank regs is function_mapped_bank{
 
 }
 
+/**
+This is for communication with the PCI device.
+*/
+
 implement control_Device_PCI {
 
+    /**
+    This method is used to start write in cmd register.
+    params: uint32 value
+    return: None
+    */
     method start_read(uint32 value){
         log info, 4: "Device Interface in start_read %d", value;
         regs.cmd.write(value);
     }
 
+    /**
+    This method is used to read the buffer register at the index.
+    params: uint16 index
+    return: uint16
+    */
+
     method read_buffer(uint16 index) -> (uint16){
         return regs.buffer[index].get_val();
     }
 
+    /**
+    This method is used to write in cmd register to move the offset and continue reading the file.
+    params: None
+    return: None
+    */
+
     method move_offeset(){
         regs.cmd.write(0x2);
     }
+
+
+    /**
+    This method is used to read the file size register.
+    params: None
+    return: uint32
+    */
 
     method read_file_size() -> (uint32){
         return regs.file_size.get_val();

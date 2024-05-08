@@ -67,22 +67,39 @@ bank regs is function_mapped_bank {
        which should match with the map_func param in one BAR */
     param function = 1;
 
+    /**
+    This register is used to store the file size of the file that is read from the device
+    */
+
     register file_size size 4 @ 0x0 {
         param init_val = 0x0;
     }
+
+    /**
+    This register is used to store the buffer size
+    */
 
     register buf_size size 4 @ 0x4 {
         param init_val = BUFFER_SIZE;
     }
     
-    //when command register is written with a 1 then the device outputs current data 
-    //stored in the input attribute
+    /**
+    This register is used to store the command that will be executed.
+    */
+
     register cmd size 4 @ 0x14 {
         is write;
         is read;
         param init_val = 0x0;
         
-        //called on write by the processor
+        /**
+        This method is used to write the cmd register
+        If the value is 0x1, the device will start reading the file
+        If the value is 0x2, the device will read the buffer from the device
+        If the value is 0x3, the device will read the file size from the device
+        param: int64 value
+        return: None
+        */
         method write(uint64 value) {
             default(value);
             local uint32 index = 0;
@@ -109,6 +126,10 @@ bank regs is function_mapped_bank {
     }
 }
 
+/**
+Connects the PCI device to the control_Device_PCI interface
+*/
+
 connect conexion_to_Device {
 
     param internal = false;
@@ -116,6 +137,12 @@ connect conexion_to_Device {
     interface control_Device_PCI {
         param required = true;
     }
+
+    /**
+    This method is used to start the read operation
+    param: uint32 value
+    return: None
+    */
 
     method start_read(uint32 value){
         if(!obj){
@@ -125,6 +152,12 @@ connect conexion_to_Device {
         }
         this.control_Device_PCI.start_read(value);
     }
+
+    /**
+    This method is used to read the buffer from the device and say move the offset
+    return: None
+    */
+
 
     method read_buffer_device(){
         if(!obj){
@@ -139,6 +172,12 @@ connect conexion_to_Device {
         }
         log info, 4: "End read buffer device";   
     }
+
+    /**
+    This method is used to read the file size from the device and save it in the register file_size
+    param: None
+    return: None
+    */
 
     method read_file_size(){
         if(!obj){
